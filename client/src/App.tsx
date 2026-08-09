@@ -65,32 +65,11 @@ export function App() {
         if (data.status) setSchedulerStatus(data.status);
         fetchFeed(data.agent.agentId);
         fetchRejectionsLog(data.agent.agentId);
-      } else if (!agentId) {
-        autoInitDefaultPersona();
       }
     } catch (err) {
       console.error('Error fetching persona:', err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const autoInitDefaultPersona = async () => {
-    try {
-      const res = await fetch('/api/agent/init', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          persona: { name: 'Ada', domain: 'AI Security' }
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.agentId) {
-        setActiveAgent({ agentId: data.agentId, name: 'Ada', domain: 'AI Security' });
-        fetchAllAgents();
-      }
-    } catch (err) {
-      console.error('Auto init failed:', err);
     }
   };
 
