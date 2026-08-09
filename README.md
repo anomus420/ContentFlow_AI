@@ -25,7 +25,7 @@ npm run build
 npm start
 ```
 
-Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) to view the control dashboard.
+Open [https://contentflowai-production.up.railway.app/](https://contentflowai-production.up.railway.app/) to view the control dashboard.
 
 ## API Documentation
 
