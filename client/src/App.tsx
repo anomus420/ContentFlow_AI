@@ -5,9 +5,10 @@ import { HowItWorks } from './components/HowItWorks';
 import { StatsBar } from './components/StatsBar';
 import { FeedList, FeedPost } from './components/FeedList';
 import { InitModal } from './components/InitModal';
+import { HelpModal } from './components/HelpModal';
 
 export function App() {
-  const [darkMode, setDarkMode] = useState<boolean>(true);
+  const [darkMode, setDarkMode] = useState<boolean>(false);
   const [activeAgent, setActiveAgent] = useState<{
     agentId: string;
     name: string;
@@ -20,6 +21,7 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isTriggering, setIsTriggering] = useState<boolean>(false);
   const [isInitModalOpen, setIsInitModalOpen] = useState<boolean>(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState<boolean>(false);
   const [allAgents, setAllAgents] = useState<Array<{ agentId: string; name: string; domain: string }>>([]);
 
   // Sync Dark/Light theme class on root HTML element
@@ -151,9 +153,36 @@ export function App() {
     }
   };
 
-  const handleInitSuccess = (agentId: string) => {
-    fetchActivePersona(agentId);
-    fetchAllAgents();
+  const handleToggleStopPersona = async () => {
+    if (!activeAgent?.agentId) return;
+
+    try {
+      const endpoint = schedulerStatus.isRunning ? '/api/agent/stop' : '/api/agent/start';
+      await fetch(`${endpoint}?agentId=${activeAgent.agentId}`, { method: 'POST' });
+      await fetchStatus(activeAgent.agentId);
+    } catch (err) {
+      console.error('Error toggling persona state:', err);
+    }
+  };
+
+  const handleInitSuccess = async (agentId: string) => {
+    setIsTriggering(true);
+    await fetchActivePersona(agentId);
+    await fetchAllAgents();
+
+    // Fast poll to catch instant 1st post generated on initialization
+    let attempts = 0;
+    const poller = setInterval(async () => {
+      attempts++;
+      const currentPosts = await fetchFeed(agentId);
+      await fetchRejectionsLog(agentId);
+      await fetchStatus(agentId);
+
+      if (currentPosts.length > 0 || attempts >= 5) {
+        clearInterval(poller);
+        setIsTriggering(false);
+      }
+    }, 1200);
   };
 
   return (
@@ -162,25 +191,29 @@ export function App() {
         darkMode={darkMode}
         setDarkMode={setDarkMode}
         activeAgent={activeAgent}
+        schedulerStatus={schedulerStatus}
         onOpenInitModal={() => setIsInitModalOpen(true)}
         onTriggerCycle={handleTriggerCycle}
+        onToggleStopPersona={handleToggleStopPersona}
+        onOpenHelpModal={() => setIsHelpModalOpen(true)}
         isTriggering={isTriggering}
       />
 
-      <main className="max-w-7xl mx-auto  px-4 lg:px-8 pt-0 space-y-8">
-        {/* Dynamic Light/Dark Banner Image occupying 80% width (leaving 20% total margin) */}
+      <main className="max-w-7xl mx-auto px-4 lg:px-8 pt-0 space-y-8">
+        {/* Dynamic Light/Dark Banner Image */}
         <div className="w-[100%] mx-auto mb-4 mt-3 flex justify-center items-center">
           <img
             src="/images/contentflow_banner.png"
             alt="ContentFlow AI Light Banner"
-            className="w-full h-auto  dark:hidden "
+            className="w-full h-auto dark:hidden"
           />
           <img
             src="/images/contentflow_banner_dark.png"
             alt="ContentFlow AI Dark Banner"
-            className="w-full h-auto  hidden dark:block "
+            className="w-full h-auto hidden dark:block"
           />
         </div>
+
         {/* Agent Switcher Bar (if multiple agents exist) */}
         {allAgents.length > 1 && (
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 font-mono text-xs">
@@ -219,6 +252,13 @@ export function App() {
         isOpen={isInitModalOpen}
         onClose={() => setIsInitModalOpen(false)}
         onInitSuccess={handleInitSuccess}
+      />
+
+      {/* Help & API Reference Guide Modal */}
+      <HelpModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
+        activeAgentId={activeAgent?.agentId}
       />
     </div>
   );

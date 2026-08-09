@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbCreateAgent, dbFindAgent, dbFindAllAgents, dbFindPosts, dbFindRejections } from '../db/store';
 import { buildVoiceBlock } from '../prompts/personaPrompts';
-import { startAgentScheduler, getSchedulerStatus, triggerManualTick } from '../services/scheduler';
+import { startAgentScheduler, stopAgentScheduler, getSchedulerStatus, triggerManualTick } from '../services/scheduler';
 
 const router = Router();
 
@@ -30,9 +30,17 @@ router.post('/init', async (req: Request, res: Response) => {
     // Start self-sustaining autonomous scheduler
     startAgentScheduler(agent.agentId);
 
+    // Instantly generate and publish 1st post on initialization
+    let firstPostResult = null;
+    try {
+      firstPostResult = await triggerManualTick(agent.agentId);
+    } catch (err) {
+      console.warn('[API /init Notice] Instant first post generation warning:', (err as Error).message);
+    }
+
     console.log(`[API /init] Initialized Agent "${agent.name}" (${agent.domain}) with ID: ${agent.agentId}`);
 
-    return res.status(200).json({ agentId: agent.agentId });
+    return res.status(200).json({ agentId: agent.agentId, firstPost: firstPostResult });
   } catch (error) {
     console.error('[API /init Error]', error);
     return res.status(500).json({ error: 'Failed to initialize agent: ' + (error as Error).message });
@@ -181,7 +189,53 @@ router.post('/trigger', async (req: Request, res: Response) => {
 });
 
 /**
- * 6. Get All Agents
+ * 6. Stop Autonomous Persona Scheduler
+ * POST /api/agent/stop?agentId=abc-123
+ */
+router.post('/stop', async (req: Request, res: Response) => {
+  try {
+    const agentId = (req.query.agentId || req.body?.agentId) as string;
+    if (!agentId) {
+      return res.status(400).json({ error: 'agentId is required' });
+    }
+
+    stopAgentScheduler(agentId);
+    return res.status(200).json({
+      success: true,
+      message: `Autonomous scheduler stopped for Agent ID: ${agentId}`
+    });
+  } catch (error) {
+    console.error('[API /stop Error]', error);
+    return res.status(500).json({ error: 'Failed to stop persona: ' + (error as Error).message });
+  }
+});
+
+/**
+ * 7. Start Autonomous Persona Scheduler
+ * POST /api/agent/start?agentId=abc-123
+ */
+router.post('/start', async (req: Request, res: Response) => {
+  try {
+    const agentId = (req.query.agentId || req.body?.agentId) as string;
+    if (!agentId) {
+      return res.status(400).json({ error: 'agentId is required' });
+    }
+
+    startAgentScheduler(agentId);
+    const status = getSchedulerStatus(agentId);
+    return res.status(200).json({
+      success: true,
+      message: `Autonomous scheduler started for Agent ID: ${agentId}`,
+      status
+    });
+  } catch (error) {
+    console.error('[API /start Error]', error);
+    return res.status(500).json({ error: 'Failed to start persona: ' + (error as Error).message });
+  }
+});
+
+/**
+ * 8. Get All Agents
  * GET /api/agent/all
  */
 router.get('/all', async (_req: Request, res: Response) => {
