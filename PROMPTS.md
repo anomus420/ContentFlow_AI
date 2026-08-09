@@ -173,3 +173,14 @@ This document contains a chronological record of all user prompts, technical req
 - Ensured posts are ONLY generated when the user clicks **"Run Cycle Now"** or when the 3–6 hour timer expires naturally.
 
 ---
+### Prompt 14: Instant 1st Post on Init, Stop/Start Persona & API User Guide
+> **User Prompt**:  
+> "when first if any user clicks the init persona button , nothing is happening initially . i want that when any persson first comes and presses the init persona button for the first time , a post should instantly be generated , and from there the next post generated time should be counted and start / schedules.  
+> also introduce a new button named Stop persona , to stop the init being called for infinite time after the first initialization . apply appropriate logic for the same in the code to implement .  
+> also develop api call arrangement for judge to stop the persona , as initialization already exists .  
+> also you must also introduce a section of instructions or help box type to tell the users how to use it via UI mode or via direck link url calls . please list all the api call paths in that ."
+
+**Resolution & Action**:
+- **Instant First Post Generation**: Updated `POST /api/agent/init` and UI persona initialization so creating a persona generates and publishes an instant 1st post immediately, starting the 3–6 hour autonomous countdown timer from that exact instant.
+- **Stop / Start Persona**: Introduced `POST /api/agent/stop` and `POST /api/agent/start` endpoints and a "Stop Persona" header button to halt or resume background recurring ticks on demand.
+- **System User Guide & API Reference Modal (`HelpModal`)**: Built an interactive modal listing instructions for UI operation and full cURL examples for all 8 backend API call paths (`/api/agent/init`, `/api/agent/feed`, `/api/agent/log`, `/api/agent/trigger`, `/api/agent/stop`, `/api/agent/start`, `/api/agent/persona`, `/api/agent/all`).
