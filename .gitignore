@@ -1,0 +1,22 @@
+# Node dependencies
+node_modules/
+client/node_modules/
+
+# Environment variables (SECURITY RISK: DO NOT COMMIT .env)
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / Editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
